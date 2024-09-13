@@ -18,51 +18,51 @@ class Ball(Rectangle):
     def __init__(self, xPos, yPos, direction):
         super().__init__(xPos, yPos, 1, 1)
         self.direction = direction
-    def move(self, yMax, leftBorder, rightBorder, obstacle1, obstacle2):
+    def move(self, yMax, leftBorder, rightBorder):
         if self.direction == 1:
-            if obstacle1.checkForBall(self) or obstacle2.checkForBall(self) or self.y_position < 2:
+            if self.y_position < 2:
                 self.direction = 4
-                return self.move(yMax, leftBorder, rightBorder, obstacle1, obstacle2)
+                return self.move(yMax, leftBorder, rightBorder)
             if rightBorder.checkForBall(self):
                 self.direction = 2
-                return self.move(yMax, leftBorder, rightBorder, obstacle1, obstacle2)
+                return self.move(yMax, leftBorder, rightBorder)
             self.y_position = self.y_position - 1
             self.x_position = self.x_position + 1
             
-        elif obstacle1.checkForBall(self) or obstacle2.checkForBall(self) or self.direction == 2:
+        elif self.direction == 2:
             if self.y_position < 2:
                 self.direction = 3
-                return self.move(yMax, leftBorder, rightBorder, obstacle1, obstacle2)
+                return self.move(yMax, leftBorder, rightBorder)
             if leftBorder.checkForBall(self):
                 self.direction = 1
-                return self.move(yMax, leftBorder, rightBorder, obstacle1, obstacle2)
+                return self.move(yMax, leftBorder, rightBorder)
             self.y_position = self.y_position - 1
             self.x_position = self.x_position - 1
 
         elif self.direction == 3:
-            if obstacle1.checkForBall(self) or obstacle2.checkForBall(self) or self.y_position > yMax - 3:
+            if self.y_position > yMax - 3:
                 self.direction = 2
-                return self.move(yMax, leftBorder, rightBorder, obstacle1, obstacle2)
+                return self.move(yMax, leftBorder, rightBorder)
             if leftBorder.checkForBall(self):
                 self.direction = 4
-                return self.move(yMax, leftBorder, rightBorder, obstacle1, obstacle2)
+                return self.move(yMax, leftBorder, rightBorder)
             self.y_position = self.y_position + 1
             self.x_position = self.x_position - 1
 
         elif self.direction == 4:
-            if obstacle1.checkForBall(self) or obstacle2.checkForBall(self) or self.y_position > yMax - 3:
+            if self.y_position > yMax - 3:
                 self.direction = 1
-                return self.move(yMax, leftBorder, rightBorder, obstacle1, obstacle2)
+                return self.move(yMax, leftBorder, rightBorder)
             if rightBorder.checkForBall(self):
                 self.direction = 3
-                return self.move(yMax, leftBorder, rightBorder, obstacle1, obstacle2)
+                return self.move(yMax, leftBorder, rightBorder)
             self.y_position = self.y_position + 1
             self.x_position = self.x_position + 1
         self.updatePos()
 
 class Border(Rectangle):
-    def __init__(self, xPos):
-            super().__init__(xPos, 2, 1, 1)
+    def __init__(self, xPos, ySize):
+            super().__init__(xPos, 2, 1, ySize)
     
     def checkForBall(self, ball):
         if (ball.x_position - 1 in self.xs and ball.y_position in self.ys) or (ball.x_position + 1 in self.xs and ball.y_position in self.ys):
@@ -83,6 +83,7 @@ class Obstacle(Rectangle):
             self.xLimitHigh = xLimitHigh
     
     def checkForBall(self, ball):
+        return False
         if (ball.y_position - 1 in self.ys and ball.x_position in self.xs) or (ball.y_position + 1 in self.ys and ball.x_position in self.xs):
             return True
         return False
@@ -106,10 +107,8 @@ class Pitch:
         yBall = random.randint(0, ySize - 1)
         direction = random.randint(1, 4)
         self.ball = Ball(xBall, yBall, direction)
-        self.leftBorder = Border(0)
-        self.rightBorder = Border(xSize - 1)
-        self.obstacle1 = Obstacle(9, 2, ballXLow, ballXHigh)
-        self.obstacle2 = Obstacle(9, 4, ballXLow, ballXHigh)
+        self.leftBorder = Border(0,1)
+        self.rightBorder = Border(xSize - 1, ySize - 4)
         self.timer = 0
     
     def updateAll(self):
@@ -136,18 +135,19 @@ class Pitch:
 
     def play(self, delay, train=False, action=0):
         self.timer += 1
-        if self.timer % 3==0:
-            self.obstacle1.play()
-            self.obstacle2.play()
         if train:
             self.leftBorder.play(action)
-            self.ball.move(self.ySize, self.leftBorder, self.rightBorder, self.obstacle1, self.obstacle2)
+            self.ball.move(self.ySize, self.leftBorder, self.rightBorder)
             if self.checkEnd():
                 if self.checkLeftLoose():
                     self.reset()
                     self.updateAll()
+                    self.reset()
                     return -1
-                self.reset()
+                else:
+                    self.reset()
+                    return 1
+                
             if self.leftBorder.checkForBall(self.ball):
                 self.updateAll()
                 return 1
@@ -156,7 +156,7 @@ class Pitch:
         else:
             self.leftBorder.play(action)
             time.sleep(delay)
-            self.ball.move(self.ySize, self.leftBorder, self.rightBorder, self.obstacle1, self.obstacle2)
+            self.ball.move(self.ySize, self.leftBorder, self.rightBorder)
             if self.checkEnd():
                 self.reset()
             self.printPitch()
@@ -177,10 +177,6 @@ class Pitch:
                     print(" | ",end="")
                 elif (i in self.rightBorder.xs) and (j in self.rightBorder.ys):
                     print(" | ",end="")
-                elif (i in self.obstacle1.xs) and (j in self.obstacle1.ys):
-                    print("___",end="")
-                elif (i in self.obstacle2.xs) and (j in self.obstacle2.ys):
-                    print("___",end="")
                 elif j == 0 or j == self.ySize - 1:
                     print("___",end="")
                 elif (i in self.ball.xs) and (j in self.ball.ys):
